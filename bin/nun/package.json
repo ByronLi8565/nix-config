@@ -1,0 +1,19 @@
+{
+  "name": "nun",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "nun": "src/main.ts"
+  },
+  "scripts": {
+    "check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@opentui/core": "^0.2.0"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.2.0",
+    "typescript": "^5.9.3"
+  }
+}

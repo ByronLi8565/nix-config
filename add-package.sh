@@ -5,12 +5,12 @@ if [ $# -eq 0 ]; then
     exit 1
 fi
 
-PACKAGES_FILE="$(dirname "$0")/packages.nix"
+PACKAGES_FILE="$(dirname "$0")/package-sets/global.nix"
 
 for PACKAGE in "$@"; do
     # Insert the package before the closing bracket
     sed -i '' "/^]$/i\\
   $PACKAGE
 " "$PACKAGES_FILE"
-    echo "Added '$PACKAGE' to packages.nix"
+    echo "Added '$PACKAGE' to package-sets/global.nix"
 done

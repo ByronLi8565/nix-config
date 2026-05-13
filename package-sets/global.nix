@@ -1,8 +1,8 @@
 pkgs:
 with pkgs; [
+  (callPackage ../bin/nun {})
   jq
   nixfmt
-  skhd
   bat
   zoxide
   tree
@@ -18,7 +18,6 @@ with pkgs; [
   cachix
   gh
   nil
-  sqlitebrowser
   jujutsu
   emacs
   pandoc
@@ -27,34 +26,18 @@ with pkgs; [
   python3
   rustup
   direnv
-  coq_8_18
-  coqPackages_8_18.vscoq-language-server
-  opam
   neovim
-  dotnet-sdk
   chezmoi
-  texlive.combined.scheme-full
   wrangler
   cargo-binstall
   zellij
-  zathura
   yazi
   ripgrep
   stylua
   nh
-  mpv-unwrapped
-  iverilog
-  gtkwave
   zig
-  butler
-  raylib
-  emscripten
   lazygit
   nushell
-  pngpaste
-  mupdf
-  stack
-  tlaplus
   poppler-utils
   ffmpeg
   bazelisk
