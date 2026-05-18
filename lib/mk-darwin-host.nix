@@ -1,6 +1,6 @@
 inputs: {
   name,
-  user ? "spheal",
+  user,
   system ? "aarch64-darwin",
   extraModules ? [],
 }: let

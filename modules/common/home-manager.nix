@@ -42,7 +42,7 @@ in {
       };
 
       shellAliases = {
-        rebuild = "sudo darwin-rebuild switch --flake /Users/spheal/nix-config#${config.networking.hostName}";
+        rebuild = "sudo darwin-rebuild switch --flake $HOME/nix-config#${config.networking.hostName}";
         ls = "lsd -A";
       };
 

@@ -18,8 +18,6 @@ type App struct {
 	Root string
 }
 
-var defaultConfigRoot = ""
-
 type PackageEntry struct {
 	Set  string
 	Name string
@@ -65,12 +63,15 @@ func (a App) repoRoot() (string, error) {
 	if root := os.Getenv("NUN_CONFIG_ROOT"); root != "" {
 		return root, nil
 	}
-	if defaultConfigRoot != "" {
-		return defaultConfigRoot, nil
-	}
 	out, err := exec.Command("git", "rev-parse", "--show-toplevel").Output()
 	if err == nil {
 		return strings.TrimSpace(string(out)), nil
+	}
+	if home, err := os.UserHomeDir(); err == nil {
+		candidate := filepath.Join(home, "nix-config")
+		if _, err := os.Stat(filepath.Join(candidate, "flake.nix")); err == nil {
+			return candidate, nil
+		}
 	}
 	return os.Getwd()
 }
@@ -119,7 +120,7 @@ func (a App) NewHostDefaults() (NewHostDefaults, error) {
 	}
 	user := os.Getenv("USER")
 	if user == "" {
-		user = "spheal"
+		user = "user"
 	}
 	return NewHostDefaults{
 		DefaultName:     name,
