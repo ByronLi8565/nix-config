@@ -6,6 +6,7 @@ type HostDefaultInput struct {
 	Name             string
 	User             string
 	System           string
+	ConfigRoot       string
 	HasPackageModule bool
 }
 
@@ -14,11 +15,16 @@ func RenderHostDefault(input HostDefaultInput) string {
 	if input.HasPackageModule {
 		extraModules = "    ./packages.nix\n"
 	}
+	configRoot := input.ConfigRoot
+	if configRoot == "" {
+		configRoot = "/Users/" + input.User + "/nix-config"
+	}
 	return `{mkDarwinHost, ...}:
 mkDarwinHost {
   name = "` + input.Name + `";
   user = "` + input.User + `";
   system = "` + input.System + `";
+  configRoot = "` + configRoot + `";
 
   extraModules = [
 ` + extraModules + `  ];

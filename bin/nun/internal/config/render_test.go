@@ -16,3 +16,15 @@ func TestRenderHostPackagesParenthesizesImports(t *testing.T) {
 		}
 	}
 }
+
+func TestRenderHostDefaultIncludesConfigRoot(t *testing.T) {
+	got := RenderHostDefault(HostDefaultInput{
+		Name:       "work-mac",
+		User:       "byron",
+		System:     "aarch64-darwin",
+		ConfigRoot: "/Users/byron/nix-config",
+	})
+	if !strings.Contains(got, `configRoot = "/Users/byron/nix-config";`) {
+		t.Fatalf("rendered host missing configRoot:\n%s", got)
+	}
+}

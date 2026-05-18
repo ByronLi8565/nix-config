@@ -4,6 +4,7 @@
   ...
 }: let
   user = config.system.primaryUser;
+  configRoot = config.environment.variables.NUN_CONFIG_ROOT;
 in {
   home-manager.useGlobalPkgs = true;
   home-manager.useUserPackages = true;
@@ -12,6 +13,10 @@ in {
     home.stateVersion = "24.05";
     home.username = user;
     home.homeDirectory = config.users.users.${user}.home;
+    home.sessionVariables.NUN_CONFIG_ROOT = configRoot;
+    home.file.".config/fish/fish_plugins".source = ../../dotfiles/fish/fish_plugins;
+    home.file.".config/fish/functions/sesh.fish".source = ../../dotfiles/fish/functions/sesh.fish;
+    home.file.".config/fish/completions/sesh.fish".source = ../../dotfiles/fish/completions/sesh.fish;
 
     programs.git = {
       enable = true;
@@ -42,12 +47,13 @@ in {
       };
 
       shellAliases = {
-        rebuild = "sudo darwin-rebuild switch --flake $HOME/nix-config#${config.networking.hostName}";
+        rebuild = "sudo darwin-rebuild switch --flake ${configRoot}#${config.networking.hostName}";
         ls = "lsd -A";
       };
 
       interactiveShellInit = ''
         set -gx PATH $HOME/.nix-profile/bin /etc/profiles/per-user/$USER/bin $PATH
+        set -gx NUN_CONFIG_ROOT ${configRoot}
         eval (opam env)
       '';
 

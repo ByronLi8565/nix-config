@@ -2,6 +2,7 @@ inputs: {
   name,
   user,
   system ? "aarch64-darwin",
+  configRoot ? "/Users/${user}/nix-config",
   extraModules ? [],
 }: let
   inherit (inputs) home-manager nix-darwin nix-homebrew self;
@@ -29,6 +30,7 @@ in
           system.primaryUser = user;
           system.configurationRevision = self.rev or self.dirtyRev or null;
           system.stateVersion = 5;
+          environment.variables.NUN_CONFIG_ROOT = configRoot;
 
           users.users.${user} = {
             name = user;

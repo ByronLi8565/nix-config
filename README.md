@@ -55,6 +55,9 @@
     nun link
     ```
 
+    Fish config is managed by Home Manager from `dotfiles/fish/` and is applied
+    by `nun rebuild`.
+
 11. If dotfiles are needed before the first rebuild, link them from the checkout directly:
 
     ```sh

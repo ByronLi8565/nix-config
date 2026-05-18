@@ -155,6 +155,7 @@ func (a App) PlanNewHost(req NewHostRequest) (HostPlan, error) {
 			Name:             req.Name,
 			User:             req.User,
 			System:           req.System,
+			ConfigRoot:       filepath.Join("/Users", req.User, "nix-config"),
 			HasPackageModule: len(req.PackageSets) > 0,
 		}),
 	}}
