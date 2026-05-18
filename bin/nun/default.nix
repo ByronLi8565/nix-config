@@ -1,29 +1,19 @@
 {
-  bun,
-  buildNpmPackage,
+  buildGoModule,
   configRoot ? "/Users/spheal/nix-config",
-  lib,
-  makeWrapper,
 }:
 
-buildNpmPackage {
+buildGoModule {
   pname = "nun";
   version = "0.1.0";
 
   src = ./.;
-  npmDepsHash = "sha256-RhnXIvoPy8ya84njheofhk5uNErEVivYlHs3Jm14oPQ=";
-  nativeBuildInputs = [makeWrapper];
-  dontNpmBuild = true;
+  vendorHash = "sha256-5kUNTqC9Wy5R1FptX7PPX7BpSWz8BGXcRzaY2qn/Md8=";
 
-  installPhase = ''
-    runHook preInstall
+  ldflags = [
+    "-X"
+    "nun/internal/config.defaultConfigRoot=${configRoot}"
+  ];
 
-    mkdir -p $out/lib/nun $out/bin
-    cp -R package.json package-lock.json bun.lock tsconfig.json src node_modules $out/lib/nun
-    makeWrapper ${bun}/bin/bun $out/bin/nun \
-      --set-default NUN_CONFIG_ROOT ${lib.escapeShellArg configRoot} \
-      --add-flags "run $out/lib/nun/src/main.ts"
-
-    runHook postInstall
-  '';
+  subPackages = ["cmd/nun"];
 }

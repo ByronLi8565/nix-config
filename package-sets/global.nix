@@ -27,7 +27,6 @@ with pkgs; [
   rustup
   direnv
   neovim
-  chezmoi
   wrangler
   cargo-binstall
   zellij
@@ -41,4 +40,6 @@ with pkgs; [
   poppler-utils
   ffmpeg
   bazelisk
+  go
+  janet
 ]

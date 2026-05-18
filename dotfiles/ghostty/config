@@ -1,0 +1,14 @@
+macos-window-shadow = false
+window-padding-x = 12
+window-padding-y = 8
+macos-titlebar-style = hidden
+confirm-close-surface = false
+keybind = global:ctrl+grave_accent=toggle_quick_terminal
+theme = Gruvbox Dark
+quick-terminal-position = center
+quick-terminal-animation-duration = 0
+shell-integration-features = sudo
+font-family = FiraCode Mono
+adjust-cell-height = 30%
+
+

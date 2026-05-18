@@ -3,8 +3,11 @@
   config,
   homebrew-cask,
   homebrew-core,
+  pkgs,
   ...
-}: {
+}: let
+  darwinPackages = import ../../package-sets/darwin.nix pkgs;
+in {
   nix-homebrew = {
     enable = true;
     enableRosetta = true;
@@ -20,6 +23,8 @@
   homebrew = {
     enable = true;
     taps = builtins.attrNames config.nix-homebrew.taps;
+    brews = darwinPackages.homebrewBrews;
+    casks = darwinPackages.homebrewCasks;
     onActivation = {
       cleanup = "zap";
       autoUpdate = true;

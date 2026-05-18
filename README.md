@@ -40,7 +40,7 @@
    ```sh
    darwin-rebuild --version
    home-manager --version
-   chezmoi --version
+   nun --help
    ```
 
 9. Apply future nixfile changes with:
@@ -49,16 +49,21 @@
    rebuild
    ```
 
-10. Set up dotfiles with `chezmoi`:
+10. Link dotfiles from this repo:
 
     ```sh
-    chezmoi init --apply https://github.com/ByronLi8565/dotfiles.git
+    nun link
     ```
 
-11. If dotfiles are needed before the first rebuild, run `chezmoi` directly from nixpkgs:
+11. If dotfiles are needed before the first rebuild, link them from the checkout directly:
 
     ```sh
-    nix run nixpkgs#chezmoi -- init --apply https://github.com/ByronLi8565/dotfiles.git
+    ln -s "$PWD/dotfiles/aerospace.toml" ~/.aerospace.toml
+    ln -s "$PWD/dotfiles/skhdrc" ~/.skhdrc
+    ln -s "$PWD/dotfiles/yabairc" ~/.yabairc
+    mkdir -p ~/.config/ghostty ~/.config/nvim
+    ln -s "$PWD/dotfiles/ghostty/config" ~/.config/ghostty/config
+    ln -s "$PWD/dotfiles/nvim/init.lua" ~/.config/nvim/init.lua
     ```
 
 12. Reboot.
