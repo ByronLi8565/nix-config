@@ -7,6 +7,9 @@ mkDarwinHost {
 
   extraModules = [
     ./packages.nix
-    ./homebrew.nix
+    ({lib, ...}: {
+      nix-homebrew.enable = lib.mkForce false;
+      homebrew.enable = lib.mkForce false;
+    })
   ];
 }
