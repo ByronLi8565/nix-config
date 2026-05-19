@@ -1,0 +1,59 @@
+#!/bin/bash
+# Vault helper functions for Cloudflare
+# https://wiki.cfdata.org/x/aB9aOQ
+
+vault-init() {
+    local cluster=$1
+    local role=$2
+    if [ ! -f /tmp/cfks.crt ]; then
+        cloudflared access curl https://vault-access.cfdata.org/v1/pki-cfks/ca/pem -o /tmp/cfks.crt
+    fi
+    export VAULT_CACERT=/tmp/cfks.crt
+
+    case $cluster in
+    prod)
+        export VAULT_ADDR=https://vault.cfdata.org:8200
+        ;;
+    oss | *-oss-*)
+        export VAULT_ADDR=https://${cluster}.vault.cfdata.org:8230
+        ;;
+    *)
+        export VAULT_ADDR=https://${cluster}.vault.cfdata.org:8200
+        ;;
+    esac
+
+    vault-login $role
+    return $?
+}
+
+vault-login() {
+    local role=$1
+    case "$role" in
+    operator)
+        export VAULT_TOKEN=$(cat $HOME/.vault-token-operator)
+        if vault token lookup >/dev/null 2>&1; then
+            return 0
+        fi
+        if vault login -method=oidc -token-only role=operator >$HOME/.vault-token-operator; then
+            export VAULT_TOKEN=$(cat $HOME/.vault-token-operator)
+            return 0
+        fi
+        ;;
+    *)
+        unset VAULT_TOKEN # Use ~/.vault-token
+        if vault token lookup >/dev/null 2>&1; then
+            return 0
+        fi
+        if vault login -method=oidc -no-print; then
+            return 0
+        fi
+        ;;
+    esac
+
+    echo "Failed to login to vault"
+    return 1
+}
+
+# Default role shortcuts
+vault-prod() { vault-init prod && vault "$@"; }
+vault-fed() { vault-init fed && vault "$@"; }

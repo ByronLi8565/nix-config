@@ -22,6 +22,7 @@ Usage:
   nun install [-i] [--set package-set] [--brew|--cask] [package...]
   nun link
   nun ingest <file>
+  nun remove [-i] [package...]
 
 Commands:
   rebuild   Rebuild this nix-darwin/NixOS config with nh
@@ -31,6 +32,7 @@ Commands:
   install   Temporarily install packages and add them to package lists
   link      Symlink repo-managed dotfiles into this user account
   ingest    Move a file to dotfiles, add to links.nix, and create symlink
+  remove    Remove packages from package lists (does not uninstall)
 `
 
 func main() {
@@ -69,6 +71,8 @@ func run(args []string) error {
 		return runLink(app, args[1:])
 	case "ingest":
 		return runIngest(app, args[1:])
+	case "remove":
+		return runRemove(app, args[1:])
 	default:
 		return fmt.Errorf("unknown command: %s", args[0])
 	}
@@ -130,6 +134,160 @@ func runIngest(app config.App, args []string) error {
 		return nil
 	}
 	return app.ApplyIngest(result, os.Stdout)
+}
+
+func runRemove(app config.App, args []string) error {
+	interactive := false
+	var packages []string
+	
+	for i := 0; i < len(args); i++ {
+		switch args[i] {
+		case "-i", "--interactive":
+			interactive = true
+		case "-h", "--help":
+			fmt.Print(`usage: nun remove [-i] [package...]
+
+Remove packages from package lists. This only edits the nix files;
+it does not uninstall already-installed packages.
+
+Flags:
+  -i, --interactive  Select packages interactively from a list
+  -h, --help        Show this help message
+
+Examples:
+  nun remove jq                    # Remove jq from its package set
+  nun remove -i                    # Interactive mode: select from list
+`)
+			return nil
+		default:
+			if strings.HasPrefix(args[i], "-") {
+				return fmt.Errorf("unknown flag: %s", args[i])
+			}
+			packages = append(packages, args[i])
+		}
+	}
+	
+	if interactive {
+		return runRemoveInteractive(app)
+	}
+	
+	if len(packages) == 0 {
+		return fmt.Errorf("usage: nun remove [-i] [package...]")
+	}
+	
+	req := config.RemoveRequest{
+		Packages: packages,
+	}
+	
+	plan, err := app.PlanRemove(req)
+	if err != nil {
+		return err
+	}
+	
+	action, err := ui.ShowPlan(ui.PlanView{
+		Title:   "nun remove",
+		Summary: "Remove packages from package lists.",
+		Sections: []ui.PlanSection{
+			{Title: "Packages to remove", Items: describeRemoveTargets(plan.Targets)},
+			{Title: "Files to modify", Items: describeWrites(plan.Writes)},
+		},
+		Actions: []ui.PlanAction{ui.PlanApply, ui.PlanCancel},
+	})
+	if err != nil {
+		return err
+	}
+	if action != ui.PlanApply {
+		fmt.Println("aborted")
+		return nil
+	}
+	return app.ApplyRemove(plan, os.Stdout)
+}
+
+func runRemoveInteractive(app config.App) error {
+	nixPackages, brewPackages, err := app.AllPackages()
+	if err != nil {
+		return err
+	}
+	if len(nixPackages) == 0 && len(brewPackages) == 0 {
+		return fmt.Errorf("no packages found in any package set or homebrew config")
+	}
+
+	result, err := ui.SelectPackagesToRemove(nixPackages, brewPackages)
+	if err != nil {
+		return err
+	}
+	if result.Aborted {
+		fmt.Println("aborted")
+		return nil
+	}
+	if result.Cancelled {
+		return nil
+	}
+	if len(result.Selected) == 0 {
+		fmt.Println("no packages selected")
+		return nil
+	}
+
+	// Convert to remove request
+	var packages []string
+	for _, entry := range result.Selected {
+		if entry.Kind == "nix" {
+			packages = append(packages, entry.Set+"/"+entry.Name)
+		} else if entry.IsGlobal {
+			packages = append(packages, "darwin/"+entry.Name)
+		} else if entry.Host != "" {
+			packages = append(packages, entry.Host+"/"+entry.Name)
+		} else {
+			packages = append(packages, entry.Name)
+		}
+	}
+
+	req := config.RemoveRequest{
+		Packages:    packages,
+		Interactive: true,
+	}
+
+	plan, err := app.PlanRemove(req)
+	if err != nil {
+		return err
+	}
+
+	action, err := ui.ShowPlan(ui.PlanView{
+		Title:   "nun remove",
+		Summary: "Remove selected packages from package lists.",
+		Sections: []ui.PlanSection{
+			{Title: "Packages to remove", Items: describeRemoveTargets(plan.Targets)},
+			{Title: "Files to modify", Items: describeWrites(plan.Writes)},
+		},
+		Actions: []ui.PlanAction{ui.PlanApply, ui.PlanCancel},
+	})
+	if err != nil {
+		return err
+	}
+	if action != ui.PlanApply {
+		fmt.Println("aborted")
+		return nil
+	}
+	return app.ApplyRemove(plan, os.Stdout)
+}
+
+func describeRemoveTargets(targets []config.RemoveTarget) []string {
+	items := make([]string, len(targets))
+	for i, target := range targets {
+		switch target.Kind {
+		case config.InstallNix:
+			items[i] = fmt.Sprintf("%s from %s", target.Package, target.PackageSet)
+		case config.InstallBrew, config.InstallCask:
+			location := target.Host
+			if target.IsGlobal {
+				location = "darwin"
+			}
+			items[i] = fmt.Sprintf("%s %s from %s", target.Kind, target.Package, location)
+		default:
+			items[i] = fmt.Sprintf("%s from %s", target.Package, target.PackageSet)
+		}
+	}
+	return items
 }
 
 func runTry(app config.App, args []string) error {

@@ -1,0 +1,22 @@
+Host *.cfdata.org
+    # this might only apply to macOS
+    AddKeysToAgent yes
+    UseKeychain yes
+    # in case your Cloudflare username is different to your laptop username
+    User byron
+    IdentityFile ~/.ssh/cloudflare/id_ed25519
+
+# SSH over Access without VPN
+# https://wiki.cfdata.org/display/PERF/2019/03/28/SSH+to+edge+via+Access+instead+of+Cisco+VPN
+Host *.ssh.cfdata.org
+    ProxyCommand /opt/homebrew/bin/cloudflared access ssh --hostname %h
+    IdentityAgent /opt/homebrew/var/run/yubikey-agent-cloudflare.sock
+Host 36*
+    ProxyCommand ssh pdx01.ssh.cfdata.org -W %h:%p
+    IdentityAgent /opt/homebrew/var/run/yubikey-agent-cloudflare.sock
+Host 348*
+    ProxyCommand ssh pdx05.ssh.cfdata.org -W %h:%p
+    IdentityAgent /opt/homebrew/var/run/yubikey-agent-cloudflare.sock
+Host 349*
+    ProxyCommand ssh pdx06.ssh.cfdata.org -W %h:%p
+    IdentityAgent /opt/homebrew/var/run/yubikey-agent-cloudflare.sock

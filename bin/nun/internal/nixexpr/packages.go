@@ -244,8 +244,62 @@ func RemoveListItem(source, item string) (string, error) {
 	lines := strings.Split(source, "\n")
 	next := make([]string, 0, len(lines))
 	for i, line := range lines {
-		if i > list.OpenLine && i < list.CloseLine && strings.TrimSpace(stripLineComment(line)) == item {
-			continue
+		if i > list.OpenLine && i < list.CloseLine {
+			clean := strings.TrimSpace(stripLineComment(line))
+			clean = strings.TrimSuffix(clean, ",")
+			if clean == item {
+				continue
+			}
+		}
+		next = append(next, line)
+	}
+	return strings.Join(next, "\n"), nil
+}
+
+func RemoveNamedListItem(source, listName, item string) (string, error) {
+	_, list, err := ParseNamedList(source, listName)
+	if err != nil {
+		return "", err
+	}
+	lines := strings.Split(source, "\n")
+	next := make([]string, 0, len(lines))
+	for i, line := range lines {
+		if i > list.OpenLine && i < list.CloseLine {
+			clean := strings.TrimSpace(stripLineComment(line))
+			clean = strings.TrimSuffix(clean, ",")
+			// For quoted strings (like homebrew packages), compare without quotes
+			if strings.HasPrefix(clean, `"`) && strings.HasSuffix(clean, `"`) {
+				clean = clean[1 : len(clean)-1]
+			}
+			if clean == item {
+				continue
+			}
+		}
+		next = append(next, line)
+	}
+	return strings.Join(next, "\n"), nil
+}
+
+func RemoveListItemAfter(source, marker, item string) (string, error) {
+	idx := strings.Index(source, marker)
+	if idx < 0 {
+		return "", fmt.Errorf("could not find marker %q", marker)
+	}
+	prefix := source[:idx]
+	linesBefore := strings.Count(prefix, "\n")
+	lines := strings.Split(source, "\n")
+	_, list, err := parseListFromLine(lines, linesBefore)
+	if err != nil {
+		return "", err
+	}
+	next := make([]string, 0, len(lines))
+	for i, line := range lines {
+		if i > list.OpenLine && i < list.CloseLine {
+			clean := strings.TrimSpace(stripLineComment(line))
+			clean = strings.TrimSuffix(clean, ",")
+			if clean == item {
+				continue
+			}
 		}
 		next = append(next, line)
 	}

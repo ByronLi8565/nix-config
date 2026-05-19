@@ -49,3 +49,76 @@ func TestRemoveListItem(t *testing.T) {
 		t.Fatalf("updated source still contains removed package:\n%s", got)
 	}
 }
+
+func TestRemoveNamedListItem(t *testing.T) {
+	source := `{
+  homebrew = {
+    casks = [
+      "docker-desktop"
+      "unity-hub"
+      "steam"
+    ];
+
+    brews = [
+      "tcl-tk"
+    ];
+  };
+}`
+	got, err := RemoveNamedListItem(source, "casks", "unity-hub")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(got, `"unity-hub"`) {
+		t.Fatalf("updated source still contains removed cask:\n%s", got)
+	}
+	if !strings.Contains(got, `"docker-desktop"`) {
+		t.Fatalf("updated source removed wrong cask:\n%s", got)
+	}
+	if !strings.Contains(got, `"steam"`) {
+		t.Fatalf("updated source removed wrong cask:\n%s", got)
+	}
+	if !strings.Contains(got, `"tcl-tk"`) {
+		t.Fatalf("updated source affected brews:\n%s", got)
+	}
+}
+
+func TestRemoveListItemAfter(t *testing.T) {
+	source := `(with pkgs; [
+  jq
+  ripgrep
+])`
+	got, err := RemoveListItemAfter(source, "(with pkgs; [", "jq")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(got, "jq") {
+		t.Fatalf("updated source still contains removed package:\n%s", got)
+	}
+	if !strings.Contains(got, "ripgrep") {
+		t.Fatalf("updated source removed wrong package:\n%s", got)
+	}
+}
+
+func TestRemoveListItemWithComma(t *testing.T) {
+	source := `pkgs:
+with pkgs; [
+  jq
+  ripgrep
+  bat
+]`
+	got, err := RemoveListItem(source, "ripgrep")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Check that ripgrep is removed
+	if strings.Contains(got, "ripgrep") {
+		t.Fatalf("updated source still contains removed package:\n%s", got)
+	}
+	// Check that other packages are still there
+	if !strings.Contains(got, "jq") {
+		t.Fatalf("updated source removed jq:\n%s", got)
+	}
+	if !strings.Contains(got, "bat") {
+		t.Fatalf("updated source removed bat:\n%s", got)
+	}
+}
