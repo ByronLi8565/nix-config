@@ -20,7 +20,6 @@ in {
           (import ../../package-sets/global.nix pkgs)
         ]
         (with pkgs; [
-          inputs.opencode.packages.${pkgs.system}.default
           cloudflared
           glab
           vault
@@ -57,49 +56,49 @@ in {
         source ~/.config/cloudflare/vault-funcs
       fi
     '';
+
+    # SSH configuration for Cloudflare
+    home.file = {
+      ".ssh/cloudflare/config".source = ./ssh-config;
+      ".config/cloudflare/vault-funcs".source = ./vault-funcs;
+    };
+
+    # Activation script for SSH setup
+    home.activation.setupCfSSH = config.lib.dag.entryAfter ["writeBoundary"] ''
+      # Create SSH directories if they don't exist
+      $DRY_RUN_CMD mkdir -p $VERBOSE_ARG "${homeDir}/.ssh/cloudflare"
+      $DRY_RUN_CMD chmod 0711 "${homeDir}/.ssh"
+      $DRY_RUN_CMD chmod 0711 "${homeDir}/.ssh/cloudflare"
+
+      # Generate SSH key if it doesn't exist
+      if [[ ! -f "${homeDir}/.ssh/cloudflare/id_ed25519" ]]; then
+        $DRY_RUN_CMD ${pkgs.openssh}/bin/ssh-keygen -t ed25519 \
+          -C "${user}@cloudflare.com" \
+          -f "${homeDir}/.ssh/cloudflare/id_ed25519" \
+          -N ""
+      fi
+
+      # Add to SSH agent
+      if [[ -f "${homeDir}/.ssh/cloudflare/id_ed25519" ]]; then
+        $DRY_RUN_CMD ${pkgs.openssh}/bin/ssh-add --apple-use-keychain \
+          "${homeDir}/.ssh/cloudflare/id_ed25519" 2>/dev/null || true
+      fi
+    '';
+
+    # Add Cloudflare SSH config to main SSH config
+    home.activation.setupSshConfig = config.lib.dag.entryAfter ["writeBoundary"] ''
+      # Create main SSH config if it doesn't exist
+      if [[ ! -f "${homeDir}/.ssh/config" ]]; then
+        $DRY_RUN_CMD touch "${homeDir}/.ssh/config"
+      fi
+
+      # Add Cloudflare include if not present
+      if ! grep -q "Include ~/.ssh/cloudflare/config" "${homeDir}/.ssh/config"; then
+        $DRY_RUN_CMD echo "" >> "${homeDir}/.ssh/config"
+        $DRY_RUN_CMD echo "# CLOUDFLARE SETUP https://gitlab.cfdata.org/cloudflare/devtools/setup-scripts/" >> "${homeDir}/.ssh/config"
+        $DRY_RUN_CMD echo "Match all" >> "${homeDir}/.ssh/config"
+        $DRY_RUN_CMD echo "    Include ~/.ssh/cloudflare/config" >> "${homeDir}/.ssh/config"
+      fi
+    '';
   };
-
-  # SSH configuration for Cloudflare
-  home-manager.users.${user}.home.file = {
-    ".ssh/cloudflare/config".source = ./ssh-config;
-    ".config/cloudflare/vault-funcs".source = ./vault-funcs;
-  };
-
-  # Activation script for SSH setup
-  home-manager.users.${user}.home.activation.setupCfSSH = config.lib.dag.entryAfter ["writeBoundary"] ''
-    # Create SSH directories if they don't exist
-    $DRY_RUN_CMD mkdir -p $VERBOSE_ARG "${homeDir}/.ssh/cloudflare"
-    $DRY_RUN_CMD chmod 0711 "${homeDir}/.ssh"
-    $DRY_RUN_CMD chmod 0711 "${homeDir}/.ssh/cloudflare"
-
-    # Generate SSH key if it doesn't exist
-    if [[ ! -f "${homeDir}/.ssh/cloudflare/id_ed25519" ]]; then
-      $DRY_RUN_CMD ${pkgs.openssh}/bin/ssh-keygen -t ed25519 \
-        -C "${user}@cloudflare.com" \
-        -f "${homeDir}/.ssh/cloudflare/id_ed25519" \
-        -N ""
-    fi
-
-    # Add to SSH agent
-    if [[ -f "${homeDir}/.ssh/cloudflare/id_ed25519" ]]; then
-      $DRY_RUN_CMD ${pkgs.openssh}/bin/ssh-add --apple-use-keychain \
-        "${homeDir}/.ssh/cloudflare/id_ed25519" 2>/dev/null || true
-    fi
-  '';
-
-  # Add Cloudflare SSH config to main SSH config
-  home-manager.users.${user}.home.activation.setupSshConfig = config.lib.dag.entryAfter ["writeBoundary"] ''
-    # Create main SSH config if it doesn't exist
-    if [[ ! -f "${homeDir}/.ssh/config" ]]; then
-      $DRY_RUN_CMD touch "${homeDir}/.ssh/config"
-    fi
-
-    # Add Cloudflare include if not present
-    if ! grep -q "Include ~/.ssh/cloudflare/config" "${homeDir}/.ssh/config"; then
-      $DRY_RUN_CMD echo "" >> "${homeDir}/.ssh/config"
-      $DRY_RUN_CMD echo "# CLOUDFLARE SETUP https://gitlab.cfdata.org/cloudflare/devtools/setup-scripts/" >> "${homeDir}/.ssh/config"
-      $DRY_RUN_CMD echo "Match all" >> "${homeDir}/.ssh/config"
-      $DRY_RUN_CMD echo "    Include ~/.ssh/cloudflare/config" >> "${homeDir}/.ssh/config"
-    fi
-  '';
 }
