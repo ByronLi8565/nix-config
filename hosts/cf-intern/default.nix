@@ -7,5 +7,6 @@ mkDarwinHost {
 
   extraModules = [
     ./packages.nix
+    ./homebrew.nix
   ];
 }

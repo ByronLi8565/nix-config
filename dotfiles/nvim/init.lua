@@ -53,14 +53,13 @@ require("lazy").setup({
 	{
 		"nvim-treesitter/nvim-treesitter",
 		build = ":TSUpdate",
-		config = function()
-			require("nvim-treesitter.configs").setup({
-				ensure_installed = { "lua", "vim", "vimdoc" },
-				auto_install = true,
-				highlight = { enable = true },
-				indent = { enable = true },
-			})
-		end,
+		main = "nvim-treesitter.configs",
+		opts = {
+			ensure_installed = { "lua", "vim", "vimdoc" },
+			auto_install = true,
+			highlight = { enable = true },
+			indent = { enable = true },
+		},
 	},
 	{ "tpope/vim-sleuth" },
 	{
@@ -123,7 +122,7 @@ require("lazy").setup({
 		end,
 	},
 	{
-		"ggandor/leap.nvim",
+		url = "git@codeberg.org:andyg/leap.nvim.git",
 		config = function()
 			vim.keymap.set({ "n", "x", "o" }, "s", "<Plug>(leap-anywhere)")
 			require("leap").opts.equivalence_classes = { " \t\r\n", "([{", ")]}", "'\"`" }

@@ -21,6 +21,7 @@ Usage:
   nun try --profile [host]
   nun install [-i] [--set package-set] [--brew|--cask] [package...]
   nun link
+  nun ingest <file>
 
 Commands:
   rebuild   Rebuild this nix-darwin/NixOS config with nh
@@ -29,6 +30,7 @@ Commands:
   try       Temporarily install packages, or dry-check a host profile
   install   Temporarily install packages and add them to package lists
   link      Symlink repo-managed dotfiles into this user account
+  ingest    Move a file to dotfiles, add to links.nix, and create symlink
 `
 
 func main() {
@@ -65,6 +67,8 @@ func run(args []string) error {
 		return runInstall(app, args[1:])
 	case "link":
 		return runLink(app, args[1:])
+	case "ingest":
+		return runIngest(app, args[1:])
 	default:
 		return fmt.Errorf("unknown command: %s", args[0])
 	}
@@ -94,6 +98,38 @@ func runLink(app config.App, args []string) error {
 		return nil
 	}
 	return app.ApplyDotfileLinks(links, os.Stdout)
+}
+
+func runIngest(app config.App, args []string) error {
+	if len(args) != 1 {
+		return fmt.Errorf("usage: nun ingest <file>")
+	}
+	filePath := args[0]
+	
+	result, err := app.PlanIngest(filePath)
+	if err != nil {
+		return err
+	}
+	
+	action, err := ui.ShowPlan(ui.PlanView{
+		Title:   "nun ingest",
+		Summary: "Move a file to dotfiles and create a symlink.",
+		Sections: []ui.PlanSection{
+			{Title: "Source", Items: []string{result.SourcePath}},
+			{Title: "Destination", Items: []string{result.DotfilesPath}},
+			{Title: "Symlink", Items: []string{result.TargetPath + " -> " + result.DotfilesPath}},
+			{Title: "Files to modify", Items: []string{"links.nix"}},
+		},
+		Actions: []ui.PlanAction{ui.PlanApply, ui.PlanCancel},
+	})
+	if err != nil {
+		return err
+	}
+	if action != ui.PlanApply {
+		fmt.Println("aborted")
+		return nil
+	}
+	return app.ApplyIngest(result, os.Stdout)
 }
 
 func runTry(app config.App, args []string) error {

@@ -30,6 +30,15 @@
       url = "github:nikitabobko/homebrew-tap";
       flake = false;
     };
+
+    opencode = {
+      url = "github:anomalyco/opencode";
+    };
+
+    cf-tap = {
+      url = "git+ssh://git@gitlab.cfdata.org/cloudflare/pkg/homebrew.git";
+      flake = false;
+    };
   };
 
   outputs = inputs: let

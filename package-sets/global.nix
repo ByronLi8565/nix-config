@@ -42,4 +42,7 @@ with pkgs; [
   bazelisk
   go
   janet
+  gcc
+  git
+  gnumake
 ]

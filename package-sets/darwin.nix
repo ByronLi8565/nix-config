@@ -14,7 +14,6 @@ pkgs: {
     "nikitabobko/tap/aerospace"
     "visual-studio-code"
     "ghostty"
-    "zoom"
     "slack"
     "zed"
     "discord"

@@ -248,7 +248,8 @@ func (a App) installTemporary(targets []InstallTarget) error {
 	for _, target := range targets {
 		switch target.Kind {
 		case InstallNix:
-			if err := run("", nil, "nix", "profile", "install", "nixpkgs#"+target.Package, "--accept-flake-config"); err != nil {
+			env := []string{"NIXPKGS_ALLOW_UNFREE=1"}
+			if err := run("", env, "nix", "profile", "install", "nixpkgs#"+target.Package, "--accept-flake-config", "--impure"); err != nil {
 				return err
 			}
 		case InstallBrew:
