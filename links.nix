@@ -6,4 +6,5 @@
   { source = "yabairc"; target = ".yabairc"; }
   { source = "ghostty/config"; target = ".config/ghostty/config"; }
   { source = "nvim/init.lua"; target = ".config/nvim/init.lua"; }
+  { source = ".config/zellij/config.kdl"; target = ".config/zellij/config.kdl"; }
 ]

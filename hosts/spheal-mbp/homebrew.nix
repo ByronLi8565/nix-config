@@ -4,7 +4,6 @@
       "docker-desktop"
       "unity-hub"
       "steam"
-      "sol"
       "zen"
     ];
 

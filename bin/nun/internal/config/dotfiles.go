@@ -25,10 +25,10 @@ type LinkSpec struct {
 // ParseLinksNix reads the links.nix file and extracts source/target pairs
 func ParseLinksNix(content string) ([]LinkSpec, error) {
 	var specs []LinkSpec
-	
+
 	// Regex to match { source = "..."; target = "..."; }
 	entryRe := regexp.MustCompile(`\{\s*source\s*=\s*"([^"]+)"\s*;\s*target\s*=\s*"([^"]+)"\s*;\s*\}`)
-	
+
 	matches := entryRe.FindAllStringSubmatch(content, -1)
 	for _, match := range matches {
 		if len(match) == 3 {
@@ -38,7 +38,7 @@ func ParseLinksNix(content string) ([]LinkSpec, error) {
 			})
 		}
 	}
-	
+
 	return specs, nil
 }
 
@@ -48,18 +48,18 @@ func (a App) ReadLinksNix() ([]LinkSpec, string, error) {
 	if err != nil {
 		return nil, "", err
 	}
-	
+
 	linksPath := filepath.Join(root, "links.nix")
 	content, err := os.ReadFile(linksPath)
 	if err != nil {
 		return nil, "", fmt.Errorf("reading links.nix: %w", err)
 	}
-	
+
 	specs, err := ParseLinksNix(string(content))
 	if err != nil {
 		return nil, "", fmt.Errorf("parsing links.nix: %w", err)
 	}
-	
+
 	return specs, string(content), nil
 }
 
@@ -72,12 +72,12 @@ func (a App) PlanDotfileLinks() ([]DotfileLink, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	specs, _, err := a.ReadLinksNix()
 	if err != nil {
 		return nil, err
 	}
-	
+
 	links := make([]DotfileLink, 0, len(specs))
 	for _, spec := range specs {
 		source := filepath.Join(root, "dotfiles", spec.Source)
@@ -161,11 +161,12 @@ func displayHomePath(path string) string {
 
 // IngestResult contains the result of an ingest operation
 type IngestResult struct {
-	SourcePath    string
-	DotfilesPath  string
-	TargetPath    string
-	LinksNixPath  string
-	BackupPath    string
+	SourcePath   string
+	DotfilesPath string
+	TargetPath   string
+	LinksNixPath string
+	RelSource    string
+	RelTarget    string
 }
 
 // PlanIngest plans the ingestion of a file into the dotfiles directory
@@ -174,18 +175,18 @@ func (a App) PlanIngest(filePath string) (IngestResult, error) {
 	if err != nil {
 		return IngestResult{}, err
 	}
-	
+
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return IngestResult{}, err
 	}
-	
+
 	// Resolve absolute path
 	absPath, err := filepath.Abs(filePath)
 	if err != nil {
 		return IngestResult{}, fmt.Errorf("resolving path: %w", err)
 	}
-	
+
 	// Check file exists
 	info, err := os.Stat(absPath)
 	if err != nil {
@@ -194,30 +195,35 @@ func (a App) PlanIngest(filePath string) (IngestResult, error) {
 	if info.IsDir() {
 		return IngestResult{}, fmt.Errorf("cannot ingest directories, only files")
 	}
-	
-	// Determine the relative path within home
-	if !strings.HasPrefix(absPath, home) {
-		return IngestResult{}, fmt.Errorf("file must be within home directory: %s", absPath)
-	}
-	
-	relPath := strings.TrimPrefix(absPath, home+string(filepath.Separator))
-	
-	// Calculate destination in dotfiles
-	dotfilesPath := filepath.Join(root, "dotfiles", relPath)
-	
-	// Calculate the target path (where the symlink will be created)
-	targetPath := absPath
-	
-	// Check if already in dotfiles
-	if strings.HasPrefix(absPath, filepath.Join(root, "dotfiles")) {
+
+	dotfilesRoot := filepath.Join(root, "dotfiles")
+	if isWithin(absPath, dotfilesRoot) {
 		return IngestResult{}, fmt.Errorf("file is already in dotfiles directory")
 	}
-	
+
+	relPath, err := filepath.Rel(home, absPath)
+	if err != nil || relPath == "." || strings.HasPrefix(relPath, ".."+string(filepath.Separator)) || relPath == ".." || filepath.IsAbs(relPath) {
+		return IngestResult{}, fmt.Errorf("file must be within home directory: %s", absPath)
+	}
+
+	// Calculate destination in dotfiles
+	dotfilesPath := filepath.Join(dotfilesRoot, relPath)
+	if _, err := os.Lstat(dotfilesPath); err == nil {
+		return IngestResult{}, fmt.Errorf("dotfiles destination already exists: %s", dotfilesPath)
+	} else if !os.IsNotExist(err) {
+		return IngestResult{}, fmt.Errorf("checking dotfiles destination: %w", err)
+	}
+
+	// Calculate the target path (where the symlink will be created)
+	targetPath := absPath
+
 	return IngestResult{
 		SourcePath:   absPath,
 		DotfilesPath: dotfilesPath,
 		TargetPath:   targetPath,
 		LinksNixPath: filepath.Join(root, "links.nix"),
+		RelSource:    filepath.ToSlash(relPath),
+		RelTarget:    filepath.ToSlash(relPath),
 	}, nil
 }
 
@@ -228,86 +234,74 @@ func AddLinkToLinksNix(content, source, target string) (string, error) {
 	if closeIdx < 0 {
 		return "", fmt.Errorf("could not find list closing bracket")
 	}
-	
+
 	// Create the new entry
 	indent := "  "
 	newEntry := fmt.Sprintf("%s{ source = \"%s\"; target = \"%s\"; }", indent, source, target)
-	
+
 	// Check if entry already exists
-	if strings.Contains(content, fmt.Sprintf(`source = "%s"`, source)) {
+	if strings.Contains(content, fmt.Sprintf(`source = "%s"`, source)) || strings.Contains(content, fmt.Sprintf(`target = "%s"`, target)) {
 		return content, nil
 	}
-	
+
 	// Insert before the closing bracket
 	before := content[:closeIdx]
 	after := content[closeIdx:]
-	
+
 	// Add newline before entry if there isn't one
 	if !strings.HasSuffix(before, "\n") {
 		before += "\n"
 	}
-	
+
 	return before + newEntry + "\n" + after, nil
 }
 
 // ApplyIngest applies the ingest operation
 func (a App) ApplyIngest(result IngestResult, out io.Writer) error {
-	// 1. Read current links.nix content
+	// 1. Read current links.nix content and prepare the updated content before moving files.
 	linksContent, err := os.ReadFile(result.LinksNixPath)
 	if err != nil {
 		return fmt.Errorf("reading links.nix: %w", err)
 	}
-	
-	// 2. Calculate relative paths
-	root, err := a.repoRoot()
+	newContent, err := AddLinkToLinksNix(string(linksContent), result.RelSource, result.RelTarget)
 	if err != nil {
-		return err
+		return fmt.Errorf("updating links.nix: %w", err)
 	}
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return err
-	}
-	
-	relSource := strings.TrimPrefix(result.DotfilesPath, filepath.Join(root, "dotfiles")+string(filepath.Separator))
-	relTarget := strings.TrimPrefix(result.TargetPath, home+string(filepath.Separator))
-	
-	// 3. Backup existing file if needed
-	if _, err := os.Lstat(result.TargetPath); err == nil {
-		suffix := time.Now().Format("20060102-150405")
-		backupPath := result.TargetPath + ".backup-" + suffix
-		if err := os.Rename(result.TargetPath, backupPath); err != nil {
-			return fmt.Errorf("backing up existing file: %w", err)
-		}
-		fmt.Fprintf(out, "backed up %s -> %s\n", displayHomePath(result.TargetPath), displayHomePath(backupPath))
-	}
-	
-	// 4. Create dotfiles subdirectory if needed
+
+	// 2. Create dotfiles subdirectory if needed.
 	dotfilesDir := filepath.Dir(result.DotfilesPath)
 	if err := os.MkdirAll(dotfilesDir, 0o755); err != nil {
 		return fmt.Errorf("creating dotfiles directory: %w", err)
 	}
-	
-	// 5. Move file to dotfiles
+	if _, err := os.Lstat(result.DotfilesPath); err == nil {
+		return fmt.Errorf("dotfiles destination already exists: %s", result.DotfilesPath)
+	} else if !os.IsNotExist(err) {
+		return fmt.Errorf("checking dotfiles destination: %w", err)
+	}
+
+	// 3. Move the source file itself into dotfiles. Do not back it up first:
+	// the original target path is where the symlink will be recreated.
 	if err := os.Rename(result.SourcePath, result.DotfilesPath); err != nil {
 		return fmt.Errorf("moving file to dotfiles: %w", err)
 	}
 	fmt.Fprintf(out, "moved %s -> %s\n", displayHomePath(result.SourcePath), result.DotfilesPath)
-	
-	// 6. Update links.nix
-	newContent, err := AddLinkToLinksNix(string(linksContent), relSource, relTarget)
-	if err != nil {
-		return fmt.Errorf("updating links.nix: %w", err)
-	}
+
+	// 4. Update links.nix with home-relative paths so this applies on other machines.
 	if err := os.WriteFile(result.LinksNixPath, []byte(newContent), 0o644); err != nil {
 		return fmt.Errorf("writing links.nix: %w", err)
 	}
-	fmt.Fprintf(out, "updated links.nix: added { source = \"%s\"; target = \"%s\"; }\n", relSource, relTarget)
-	
-	// 7. Create symlink
+	fmt.Fprintf(out, "updated links.nix: added { source = \"%s\"; target = \"%s\"; }\n", result.RelSource, result.RelTarget)
+
+	// 5. Create symlink at the original path.
 	if err := os.Symlink(result.DotfilesPath, result.TargetPath); err != nil {
 		return fmt.Errorf("creating symlink: %w", err)
 	}
 	fmt.Fprintf(out, "linked %s -> %s\n", displayHomePath(result.TargetPath), result.DotfilesPath)
-	
+
 	return nil
+}
+
+func isWithin(path, root string) bool {
+	rel, err := filepath.Rel(root, path)
+	return err == nil && rel != "." && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) && !filepath.IsAbs(rel)
 }
