@@ -17,6 +17,7 @@ in {
     home.file.".config/fish/fish_plugins".source = ../../dotfiles/fish/fish_plugins;
     home.file.".config/fish/functions/sesh.fish".source = ../../dotfiles/fish/functions/sesh.fish;
     home.file.".config/fish/completions/sesh.fish".source = ../../dotfiles/fish/completions/sesh.fish;
+    home.file.".config/zellij/plugins/zjstatus.wasm".source = "${pkgs.zjstatus}/bin/zjstatus.wasm";
 
     programs.git = {
       enable = true;

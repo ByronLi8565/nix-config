@@ -30,6 +30,7 @@ with pkgs; [
   wrangler
   cargo-binstall
   zellij
+  zjstatus
   yazi
   ripgrep
   stylua

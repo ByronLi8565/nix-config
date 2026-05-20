@@ -62,13 +62,11 @@ func TestTryListPathUsesNunTrialsJSON(t *testing.T) {
 func TestProfileDryRunArgs(t *testing.T) {
 	got := ProfileDryRunArgs("/tmp/nix-config", "spheal-mbp")
 	want := []string{
-		"nix",
+		"darwin-rebuild",
 		"build",
 		"--dry-run",
-		"path:/tmp/nix-config#darwinConfigurations.spheal-mbp.system",
-		"--accept-flake-config",
-		"--extra-experimental-features",
-		"pipe-operators",
+		"--flake",
+		"/tmp/nix-config#spheal-mbp",
 	}
 	if strings.Join(got, "\x00") != strings.Join(want, "\x00") {
 		t.Fatalf("args = %#v, want %#v", got, want)

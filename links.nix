@@ -7,4 +7,5 @@
   { source = "ghostty/config"; target = ".config/ghostty/config"; }
   { source = "nvim/init.lua"; target = ".config/nvim/init.lua"; }
   { source = ".config/zellij/config.kdl"; target = ".config/zellij/config.kdl"; }
+  { source = ".config/zellij/layouts/battlestation.kdl"; target = ".config/zellij/layouts/battlestation.kdl"; }
 ]

@@ -26,6 +26,11 @@ in
 
           nixpkgs.hostPlatform = system;
           nixpkgs.config.allowUnfree = true;
+          nixpkgs.overlays = [
+            (final: prev: {
+              zjstatus = inputs.zjstatus.packages.${prev.system}.default;
+            })
+          ];
 
           system.primaryUser = user;
           system.configurationRevision = self.rev or self.dirtyRev or null;

@@ -13,7 +13,7 @@ import (
 const help = `nun config helper
 
 Usage:
-  nun rebuild [host] [--remote] [nh flags...] [-- nix flags...]
+  nun rebuild [host] [--remote] [rebuild flags...] [-- nix flags...]
   nun packages
   nun hosts
   nun hosts new
@@ -25,7 +25,7 @@ Usage:
   nun remove [-i] [package...]
 
 Commands:
-  rebuild   Rebuild this nix-darwin/NixOS config with nh
+  rebuild   Rebuild this nix-darwin/NixOS config
   packages  Browse package-sets/*.nix in a terminal view
   hosts     Print the current host, or create a new host with 'nun hosts new'
   try       Temporarily install packages, or dry-check a host profile
@@ -348,7 +348,7 @@ func runTryProfile(app config.App, args []string) error {
 		Sections: []ui.PlanSection{
 			{Title: "Command", Items: []string{"nun try --profile " + host}},
 			{Title: "Host", Items: []string{host}},
-			{Title: "Check", Items: []string{"nix build --dry-run path:<config-root>#darwinConfigurations." + host + ".system"}},
+			{Title: "Check", Items: []string{"darwin-rebuild build --dry-run --flake <config-root>#" + host}},
 		},
 		Actions: []ui.PlanAction{ui.PlanApply, ui.PlanCancel},
 	})

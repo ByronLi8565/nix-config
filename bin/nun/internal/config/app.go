@@ -259,23 +259,26 @@ func (a App) Rebuild(args []string) error {
 		return err
 	}
 	separator := indexOf(forwarded, "--")
-	nhFlags := forwarded
+	rebuildFlags := forwarded
 	var nixFlags []string
 	if separator >= 0 {
-		nhFlags = forwarded[:separator]
+		rebuildFlags = forwarded[:separator]
 		nixFlags = forwarded[separator+1:]
 	}
-	osArgs := []string{"os", "switch", "."}
-	env := os.Environ()
 	if runtime.GOOS == "darwin" {
-		osArgs = []string{"darwin", "switch", "."}
-	} else {
-		env = append(env, "NH_BYPASS_ROOT_CHECK=true")
+		cmd := []string{"sudo", "darwin-rebuild", "switch", "--flake", root + "#" + host}
+		cmd = append(cmd, rebuildFlags...)
+		cmd = append(cmd, nixFlags...)
+		return run(root, os.Environ(), cmd...)
 	}
+	osArgs := []string{"os", "switch", "."}
+	env := append(os.Environ(), "NH_BYPASS_ROOT_CHECK=true")
 	cmd := append([]string{"nh"}, osArgs...)
 	cmd = append(cmd, "--hostname", host)
-	cmd = append(cmd, nhFlags...)
-	cmd = append(cmd, "--", "--accept-flake-config", "--extra-experimental-features", "pipe-operators")
+	cmd = append(cmd, rebuildFlags...)
+	if len(nixFlags) > 0 {
+		cmd = append(cmd, "--")
+	}
 	cmd = append(cmd, nixFlags...)
 	return run(root, env, cmd...)
 }

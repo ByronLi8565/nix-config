@@ -2,13 +2,36 @@ macos-window-shadow = false
 window-padding-x = 12
 window-padding-y = 8
 macos-titlebar-style = hidden
+macos-option-as-alt = true
 confirm-close-surface = false
 keybind = global:ctrl+grave_accent=toggle_quick_terminal
+keybind = super+h=unbind
+keybind = super+l=unbind
+keybind = super+shift+h=unbind
+keybind = super+shift+l=unbind
+keybind = super+t=unbind
+keybind = super+w=unbind
+keybind = super+digit_1=unbind
+keybind = super+1=unbind
+keybind = super+digit_2=unbind
+keybind = super+2=unbind
+keybind = super+digit_3=unbind
+keybind = super+3=unbind
+keybind = super+digit_4=unbind
+keybind = super+4=unbind
+keybind = super+digit_5=unbind
+keybind = super+5=unbind
+keybind = super+digit_6=unbind
+keybind = super+6=unbind
+keybind = super+digit_7=unbind
+keybind = super+7=unbind
+keybind = super+digit_8=unbind
+keybind = super+8=unbind
+keybind = super+digit_9=unbind
+keybind = super+9=unbind
 theme = Gruvbox Dark
 quick-terminal-position = center
 quick-terminal-animation-duration = 0
 shell-integration-features = sudo
 font-family = FiraCode Mono
 adjust-cell-height = 30%
-
-

@@ -99,13 +99,11 @@ func (a App) TryProfile(host string) error {
 
 func ProfileDryRunArgs(root, host string) []string {
 	return []string{
-		"nix",
+		"darwin-rebuild",
 		"build",
 		"--dry-run",
-		"path:" + root + "#darwinConfigurations." + host + ".system",
-		"--accept-flake-config",
-		"--extra-experimental-features",
-		"pipe-operators",
+		"--flake",
+		root + "#" + host,
 	}
 }
 
