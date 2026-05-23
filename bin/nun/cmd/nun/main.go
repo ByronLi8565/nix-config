@@ -32,7 +32,7 @@ Commands:
   install   Temporarily install packages and add them to package lists
   link      Symlink repo-managed dotfiles into this user account
   ingest    Move a file to dotfiles, add to links.nix, and create symlink
-  remove    Remove packages from package lists (does not uninstall)
+  remove    Remove packages from package lists and nix profile
 `
 
 func main() {
@@ -92,16 +92,17 @@ func runLink(app config.App, args []string) error {
 		Sections: []ui.PlanSection{
 			{Title: "Links", Items: config.DotfilePlanItems(links)},
 		},
-		Actions: []ui.PlanAction{ui.PlanApply, ui.PlanCancel},
+		Actions: []ui.PlanAction{ui.PlanApply, ui.PlanApplyNoBackups, ui.PlanCancel},
 	})
 	if err != nil {
 		return err
 	}
-	if action != ui.PlanApply {
+	if action == ui.PlanCancel {
 		fmt.Println("aborted")
 		return nil
 	}
-	return app.ApplyDotfileLinks(links, os.Stdout)
+	skipBackups := action == ui.PlanApplyNoBackups
+	return app.ApplyDotfileLinks(links, skipBackups, os.Stdout)
 }
 
 func runIngest(app config.App, args []string) error {
@@ -109,12 +110,12 @@ func runIngest(app config.App, args []string) error {
 		return fmt.Errorf("usage: nun ingest <file>")
 	}
 	filePath := args[0]
-	
+
 	result, err := app.PlanIngest(filePath)
 	if err != nil {
 		return err
 	}
-	
+
 	action, err := ui.ShowPlan(ui.PlanView{
 		Title:   "nun ingest",
 		Summary: "Move a file to dotfiles and create a symlink.",
@@ -139,7 +140,7 @@ func runIngest(app config.App, args []string) error {
 func runRemove(app config.App, args []string) error {
 	interactive := false
 	var packages []string
-	
+
 	for i := 0; i < len(args); i++ {
 		switch args[i] {
 		case "-i", "--interactive":
@@ -147,8 +148,7 @@ func runRemove(app config.App, args []string) error {
 		case "-h", "--help":
 			fmt.Print(`usage: nun remove [-i] [package...]
 
-Remove packages from package lists. This only edits the nix files;
-it does not uninstall already-installed packages.
+Remove packages from package lists and from nix profile when present.
 
 Flags:
   -i, --interactive  Select packages interactively from a list
@@ -166,30 +166,31 @@ Examples:
 			packages = append(packages, args[i])
 		}
 	}
-	
+
 	if interactive {
 		return runRemoveInteractive(app)
 	}
-	
+
 	if len(packages) == 0 {
 		return fmt.Errorf("usage: nun remove [-i] [package...]")
 	}
-	
+
 	req := config.RemoveRequest{
 		Packages: packages,
 	}
-	
+
 	plan, err := app.PlanRemove(req)
 	if err != nil {
 		return err
 	}
-	
+
 	action, err := ui.ShowPlan(ui.PlanView{
 		Title:   "nun remove",
 		Summary: "Remove packages from package lists.",
 		Sections: []ui.PlanSection{
 			{Title: "Packages to remove", Items: describeRemoveTargets(plan.Targets)},
 			{Title: "Files to modify", Items: describeWrites(plan.Writes)},
+			{Title: "Nix profile removals", Items: plan.ProfileRemovals},
 		},
 		Actions: []ui.PlanAction{ui.PlanApply, ui.PlanCancel},
 	})
@@ -258,6 +259,7 @@ func runRemoveInteractive(app config.App) error {
 		Sections: []ui.PlanSection{
 			{Title: "Packages to remove", Items: describeRemoveTargets(plan.Targets)},
 			{Title: "Files to modify", Items: describeWrites(plan.Writes)},
+			{Title: "Nix profile removals", Items: plan.ProfileRemovals},
 		},
 		Actions: []ui.PlanAction{ui.PlanApply, ui.PlanCancel},
 	})

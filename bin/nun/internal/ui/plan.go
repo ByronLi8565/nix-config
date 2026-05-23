@@ -9,9 +9,10 @@ import (
 type PlanAction string
 
 const (
-	PlanApply       PlanAction = "apply"
-	PlanCancel      PlanAction = "cancel"
-	PlanInteractive PlanAction = "interactive"
+	PlanApply          PlanAction = "apply"
+	PlanCancel         PlanAction = "cancel"
+	PlanInteractive    PlanAction = "interactive"
+	PlanApplyNoBackups PlanAction = "apply_no_backups"
 )
 
 type PlanSection struct {
@@ -76,6 +77,11 @@ func (m planModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.action = PlanApply
 				return m, tea.Quit
 			}
+		case "b":
+			if actionIndex(m.plan.Actions, PlanApplyNoBackups) >= 0 {
+				m.action = PlanApplyNoBackups
+				return m, tea.Quit
+			}
 		case "n":
 			m.action = PlanCancel
 			return m, tea.Quit
@@ -134,7 +140,7 @@ func (m planModel) View() tea.View {
 		}
 	}
 	b.WriteString("\n\n")
-	b.WriteString(subtleStyle.Render("tab/h/l move  enter/space select  y apply  n cancel"))
+	b.WriteString(subtleStyle.Render("tab/h/l move  enter/space select  y apply  b apply without backups  n cancel"))
 	if actionIndex(m.plan.Actions, PlanInteractive) >= 0 {
 		b.WriteString(subtleStyle.Render("  i interactive"))
 	}
@@ -146,6 +152,8 @@ func actionLabel(action PlanAction) string {
 	switch action {
 	case PlanApply:
 		return "Apply"
+	case PlanApplyNoBackups:
+		return "Apply without backups"
 	case PlanInteractive:
 		return "Interactive"
 	default:

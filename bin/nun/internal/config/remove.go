@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -13,10 +14,10 @@ import (
 
 // HomebrewPackage represents a brew or cask package
 type HomebrewPackage struct {
-	Name       string
-	Kind       InstallKind // InstallBrew or InstallCask
-	Host       string      // Host name (empty for global)
-	IsGlobal   bool
+	Name     string
+	Kind     InstallKind // InstallBrew or InstallCask
+	Host     string      // Host name (empty for global)
+	IsGlobal bool
 }
 
 // AllPackages returns all packages (nix + homebrew) for the current configuration
@@ -118,8 +119,9 @@ type RemoveTarget struct {
 }
 
 type RemovePlan struct {
-	Targets []RemoveTarget
-	Writes  []PendingWrite
+	Targets         []RemoveTarget
+	Writes          []PendingWrite
+	ProfileRemovals []string
 }
 
 type RemoveRequest struct {
@@ -145,7 +147,7 @@ func (a App) PlanRemove(req RemoveRequest) (RemovePlan, error) {
 		set  string
 		name string
 	}
-	
+
 	// Map from "set/name" or just "name" to target info
 	lookup := make(map[string]struct {
 		kind     InstallKind
@@ -212,7 +214,7 @@ func (a App) PlanRemove(req RemoveRequest) (RemovePlan, error) {
 			Host:     info.host,
 			IsGlobal: info.isGlobal,
 		}
-		
+
 		if info.kind == InstallNix {
 			target.PackageSet = info.pkgSet
 			// Extract just the name if fully qualified
@@ -220,7 +222,7 @@ func (a App) PlanRemove(req RemoveRequest) (RemovePlan, error) {
 				target.Package = pkg[idx+1:]
 			}
 		}
-		
+
 		targets = append(targets, target)
 	}
 
@@ -270,7 +272,7 @@ func (a App) buildRemovePlan(root string, targets []RemoveTarget) (RemovePlan, e
 		})
 	}
 
-	return RemovePlan{Targets: targets, Writes: writes}, nil
+	return RemovePlan{Targets: targets, Writes: writes, ProfileRemovals: nixProfileRemovals(targets)}, nil
 }
 
 // removeLocation determines which file a package should be removed from
@@ -322,7 +324,55 @@ func (a App) removePackageFromSource(source string, target RemoveTarget) (string
 
 // ApplyRemove applies the removal plan
 func (a App) ApplyRemove(plan RemovePlan, out io.Writer) error {
-	return a.ApplyWrites(plan.Writes, out)
+	if err := a.ApplyWrites(plan.Writes, out); err != nil {
+		return err
+	}
+	for _, name := range plan.ProfileRemovals {
+		installed, err := nixProfileHas(name)
+		if err != nil {
+			return err
+		}
+		if !installed {
+			continue
+		}
+		fmt.Fprintf(out, "Removing %s from nix profile\n", name)
+		if err := run("", nil, "nix", "profile", "remove", name); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func nixProfileRemovals(targets []RemoveTarget) []string {
+	seen := map[string]bool{}
+	var names []string
+	for _, target := range targets {
+		if target.Kind != InstallNix || seen[target.Package] {
+			continue
+		}
+		seen[target.Package] = true
+		names = append(names, target.Package)
+	}
+	sort.Strings(names)
+	return names
+}
+
+func nixProfileHas(name string) (bool, error) {
+	output, err := exec.Command("nix", "profile", "list").Output()
+	if err != nil {
+		return false, fmt.Errorf("nix profile list: %w", err)
+	}
+	needle := "Name:"
+	for _, line := range strings.Split(string(output), "\n") {
+		line = strings.TrimSpace(line)
+		if !strings.HasPrefix(line, needle) {
+			continue
+		}
+		if strings.TrimSpace(strings.TrimPrefix(line, needle)) == name {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 // FindPackage searches for a package across all package sets

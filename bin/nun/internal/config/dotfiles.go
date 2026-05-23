@@ -107,7 +107,7 @@ func (a App) PlanDotfileLinks() ([]DotfileLink, error) {
 	return links, nil
 }
 
-func (a App) ApplyDotfileLinks(links []DotfileLink, out io.Writer) error {
+func (a App) ApplyDotfileLinks(links []DotfileLink, skipBackups bool, out io.Writer) error {
 	suffix := time.Now().Format("20060102-150405")
 	for _, link := range links {
 		if link.Action == "already linked" {
@@ -117,7 +117,7 @@ func (a App) ApplyDotfileLinks(links []DotfileLink, out io.Writer) error {
 		if err := os.MkdirAll(filepath.Dir(link.Target), 0o755); err != nil {
 			return err
 		}
-		if link.Backup != "" {
+		if link.Backup != "" && !skipBackups {
 			backup := link.Backup + "-" + suffix
 			if err := os.Rename(link.Target, backup); err != nil {
 				return err

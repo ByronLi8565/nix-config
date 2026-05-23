@@ -10,7 +10,6 @@ with pkgs; [
   alejandra
   fzf
   tldr
-  bun
   tree-sitter
   cmake
   uv

@@ -17,6 +17,7 @@ in {
 
   home-manager.users.${user} = {
     home.packages = darwinPkgs ++ globalPkgs ++ (with pkgs; [
+  helix
     ]);
 
   };

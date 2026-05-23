@@ -52,6 +52,7 @@ require("lazy").setup({
 
 	{
 		"nvim-treesitter/nvim-treesitter",
+		branch = "master",
 		build = ":TSUpdate",
 		main = "nvim-treesitter.configs",
 		opts = {
