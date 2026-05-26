@@ -1,5 +1,6 @@
 {
   config,
+  inputs,
   pkgs,
   ...
 }: let
@@ -10,6 +11,8 @@ in {
   home-manager.useUserPackages = true;
 
   home-manager.users.${user} = {
+    imports = [inputs.hunk.homeManagerModules.default];
+
     home.stateVersion = "24.05";
     home.username = user;
     home.homeDirectory = config.users.users.${user}.home;
@@ -42,6 +45,13 @@ in {
     programs.zoxide = {
       enable = true;
       options = ["--no-cmd"];
+    };
+
+    programs.hunk = {
+      enable = true;
+      settings = {
+        theme = "gruvbox";
+      };
     };
 
     programs.zsh = {

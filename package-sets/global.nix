@@ -5,6 +5,7 @@ with pkgs; [
   nixfmt
   bat
   zoxide
+  starship
   tree
   lsd
   alejandra
